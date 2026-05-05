@@ -1,22 +1,31 @@
 # 🎯 AI Resume Screening & Matching System
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
+![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-1.8.0-orange.svg)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.11.0-EE4C2C.svg)
 ![SentenceTransformers](https://img.shields.io/badge/SentenceTransformers-5.4.1-green.svg)
 ![XGBoost](https://img.shields.io/badge/XGBoost-3.2.0-blue.svg)
 ![Streamlit](https://img.shields.io/badge/Streamlit-1.57.0-red.svg)
 
-## 📌 Project Overview
-An intelligent, end-to-end Machine Learning pipeline designed to automate the resume screening process. This system leverages both **Traditional Machine Learning (XGBoost + TF-IDF)** for profession classification and **Deep Learning (PyTorch + Sentence Transformers)** for semantic candidate-to-job matching.
+> An intelligent, end-to-end Machine Learning pipeline designed to automate the resume screening process. This system leverages both **Traditional Machine Learning (XGBoost)** for profession classification and **Deep Learning (Sentence Transformers)** for semantic candidate-to-job matching.
 
-By automating the first-pass screening, this tool helps HR professionals and technical recruiters quickly identify the most suitable candidates based on contextual meaning rather than just exact keyword matches.
+*(Please insert your application screenshot here: `![App Demo](assets/demo.png)`)*
+
+---
+
+## 🚀 The Problem & Business Value
+Traditional Applicant Tracking Systems (ATS) rely heavily on rigid keyword matching. If a company is looking for a "Software Engineer" and the candidate writes "Backend Developer", traditional systems might score them poorly. 
+
+**This AI Screener solves that problem by:**
+- **Understanding Context:** Using Deep Learning to evaluate the *semantic meaning* of a resume against a Job Description, not just exact keywords.
+- **Reducing Manual Screening Time:** Evaluates and ranks dozens of CVs (PDF, DOCX, TXT) in seconds.
+- **Providing AI Confidence:** Uses XGBoost to confidently predict the candidate's core profession, acting as a secondary verification against their claimed experience.
 
 ---
 
 ## 🏗️ System Architecture
 
-The pipeline consists of three main phases: Data Preprocessing & Feature Engineering, Model Training, and Inference (via Streamlit UI).
+The pipeline consists of Data Preprocessing, Model Training, and Inference (via Streamlit UI).
 
 ```mermaid
 graph TD;
@@ -41,23 +50,31 @@ graph TD;
 
 ## ✨ Key Features & Technical Implementations
 
-### 1. Advanced Feature Engineering
+### 1. Multi-Format Document Parsing
+- Native support for uploading and extracting text from **`.pdf`**, **`.docx`**, and **`.txt`** files using `pdfplumber` and `python-docx`.
+
+### 2. Advanced Feature Engineering
 - **Regex Extraction:** Automated parsing of years of experience and contact information cleaning.
 - **Skill Taxonomy Matching:** Computes the skill overlap ratio between the candidate's resume and the target job description against a predefined tech stack taxonomy.
 - **TF-IDF Vectorization:** Extracts the top 5,000 most significant word features across the corpus.
 
-### 2. Traditional Machine Learning (Classification)
-Trained and evaluated 5 different algorithms to predict the applicant's core profession out of 24 distinct categories:
+### 3. Traditional Machine Learning (Classification)
+Trained and evaluated 5 different algorithms to predict the applicant's core profession out of 24 distinct categories. 
 - **Logistic Regression:** 65.59% Accuracy
 - **Naive Bayes:** 54.53% Accuracy
 - **SVM (LinearSVC):** 71.43% Accuracy
 - **Random Forest:** 68.81% Accuracy
 - **🏆 XGBoost:** **77.87% Accuracy** *(Selected for final deployment)*
 
-### 3. Deep Learning Semantic Matching
-- Overcomes the limitation of traditional "Keyword Matching" ATS systems.
-- Utilizes **Sentence Transformers (`all-MiniLM-L6-v2`)** via PyTorch to generate high-dimensional embeddings of both the resume and the job description.
-- Calculates Cosine Similarity to provide a semantic **Match Score (0-100)**. It understands that "Software Engineer" and "Backend Developer" are contextually highly relevant.
+### 4. Deep Learning Semantic Matching
+- Utilizes **Sentence Transformers (`all-MiniLM-L6-v2`)** via PyTorch to generate high-dimensional embeddings (384 dimensions) of both the resume and the job description.
+- Calculates **Cosine Similarity** to provide a normalized **Match Score (0-100)**. 
+
+---
+
+## 💾 Datasets Used
+- **[Resume Dataset (Kaggle)](https://www.kaggle.com/)**: Used to train the XGBoost classifier to recognize 24 different job categories.
+- **Job Descriptions**: Extracted and synthesized to test the semantic matching engine.
 
 ---
 
@@ -67,7 +84,7 @@ Trained and evaluated 5 different algorithms to predict the applicant's core pro
 |----------|-------------------|
 | **Core ML** | `scikit-learn`, `XGBoost` |
 | **Deep Learning** | `PyTorch`, `sentence-transformers`, `transformers` |
-| **Data Processing** | `pandas`, `numpy`, `nltk`, `re` |
+| **Data Processing** | `pandas`, `numpy`, `nltk`, `re`, `pdfplumber`, `python-docx` |
 | **Frontend/UI** | `streamlit` |
 | **Model Serialization** | `joblib` |
 | **Visualization** | `matplotlib`, `seaborn` |
@@ -132,11 +149,10 @@ Open `notebooks/06_create_model.ipynb` in your IDE and **Run All Cells**. This w
 ```bash
 streamlit run app/app.py
 ```
-Upload `.txt` resumes, paste a target Job Description, and let the AI rank the best candidates for you!
 
 ---
 
 ## 📈 Future Improvements
-- Add OCR parsing for `.pdf` and `.docx` using `pdfplumber` and `pytesseract`.
 - Implement LangChain / LLM (GPT-4o / LLaMA-3) to generate human-readable justifications for why a candidate was ranked highly.
 - Expand the predefined skill taxonomy dynamically using a Knowledge Graph.
+- Deploy the application via Docker to AWS/GCP or Streamlit Cloud.
