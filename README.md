@@ -1,3 +1,13 @@
+---
+title: AI Resume Screener
+emoji: 🎯
+colorFrom: blue
+colorTo: indigo
+sdk: streamlit
+app_file: app/app.py
+pinned: false
+---
+
 # 🎯 AI Resume Screening & Matching System
 
 ![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)
