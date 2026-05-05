@@ -92,7 +92,7 @@ Gunakan dataset publik dari Kaggle (gratis):
 
 | Dataset | URL | Ukuran |
 |---------|-----|--------|
-| **Resume Dataset** | `kaggle.com/datasets/gauravduttakiit/resume-dataset` | 2,484 resumes, 25 categories |
+| **Resume Dataset** | `kaggle.com/datasets/snehaanbhawal/resume-dataset` | 2,400+ resumes, String and PDF format |
 | **Job Description Dataset** | `kaggle.com/datasets/andrewmvd/data-scientist-jobs` | 4,000+ job descriptions |
 
 ```bash
@@ -100,7 +100,7 @@ Gunakan dataset publik dari Kaggle (gratis):
 pip install kaggle
 
 # Download (atau manual download dari browser)
-kaggle datasets download -d gauravduttakiit/resume-dataset
+kaggle datasets download -d snehaanbhawal/resume-dataset
 kaggle datasets download -d andrewmvd/data-scientist-jobs
 ```
 
