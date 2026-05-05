@@ -1,0 +1,586 @@
+# 🎯 ML Project Guide: Menutup Gap Prioritas 1
+
+> **Tujuan:** Satu project yang membuktikan Anda bisa **melatih model ML sendiri**, bukan hanya memanggil API LLM.
+>
+> **Target Keywords:** scikit-learn, PyTorch, Model Training, Feature Engineering, Classification, NLP, Sentence Transformers
+>
+> **Impact:** Unlock **10 lowongan** → Match rate naik dari 31% → 59%
+
+---
+
+## Mengapa "AI Resume Screener" Masih Paling Strategis
+
+Project lama di `analisis_strategi_ml_project.md` menyarankan "AI Resume Screener" yang menggabungkan LangChain + ML + LLM. Sekarang LangChain sudah terpenuhi, tapi **inti project tersebut (ML pipeline) tetap valid**. Alasannya:
+
+| Alternatif Project | Pros | Cons |
+|-------------------|------|------|
+| **A. AI Resume Screener** | Langsung relevan untuk recruiter, dataset publik banyak (Kaggle), cover semua skill target | Tidak terhubung langsung ke portfolio existing |
+| B. Complaint Classifier ML (CIMAS v2) | Terhubung ke Smart Chatbot | Dataset harus dibuat sendiri (terlalu sedikit data real) |
+| C. Tenant Default Predictor (Rusunawa) | Terhubung ke kerja nyata | Data sensitif pemerintah, sulit di-publish |
+| D. CPNS Question Difficulty Predictor | Terhubung ke Test-CPNS | Terlalu niche, recruiter kurang tertarik |
+
+**Rekomendasi: Tetap AI Resume Screener**, tapi scope diperkecil karena LangChain sudah tidak perlu di-include. Fokus **100% di ML pipeline**.
+
+---
+
+## Project: AI Resume Screening & Matching System
+
+### Apa yang Dibangun
+
+```
+Input:  Resume (PDF/text) + Job Description (text)
+Output: Match Score (0-100) + Reasoning + Ranked Candidates
+```
+
+### Skill yang Ter-cover
+
+| Skill Target | Cara Tercovernya di Project |
+|---|---|
+| **scikit-learn** | Random Forest / XGBoost classifier untuk match scoring |
+| **PyTorch** | Sentence Transformers untuk semantic similarity |
+| **Model Training** | Train classifier dari labeled dataset |
+| **Feature Engineering** | TF-IDF, skill overlap ratio, experience extraction |
+| **Classification** | Binary (fit/unfit) + multi-class (junior/mid/senior) |
+| **NLP** | Text preprocessing, tokenization, named entity extraction |
+| **Sentence Transformers** | Semantic matching resume vs JD |
+| **Model Evaluation** | Confusion matrix, Precision, Recall, F1, ROC-AUC |
+
+---
+
+## Step-by-Step Guide
+
+### Phase 1: Setup & Data (Hari 1-2)
+
+#### Step 1.1 — Buat Repository
+
+```bash
+cd d:/Project/01\ Skills
+mkdir AI-Resume-Screener
+cd AI-Resume-Screener
+git init
+```
+
+#### Step 1.2 — Struktur Folder
+
+```
+AI-Resume-Screener/
+├── data/
+│   ├── raw/              # Dataset asli dari Kaggle
+│   └── processed/        # Data yang sudah di-clean
+├── notebooks/
+│   ├── 01_eda.ipynb              # Exploratory Data Analysis
+│   ├── 02_feature_engineering.ipynb
+│   ├── 03_sklearn_models.ipynb   # scikit-learn models
+│   ├── 04_pytorch_model.ipynb    # Sentence Transformers
+│   └── 05_comparison.ipynb       # ML vs DL comparison
+├── src/
+│   ├── data_processing.py    # Data cleaning & preprocessing
+│   ├── feature_engineering.py # Feature extraction
+│   ├── sklearn_pipeline.py   # scikit-learn training pipeline
+│   ├── pytorch_pipeline.py   # PyTorch training pipeline
+│   └── predict.py            # Inference script
+├── app/
+│   └── app.py                # Streamlit demo UI
+├── models/                   # Saved models
+├── requirements.txt
+└── README.md
+```
+
+#### Step 1.3 — Dataset
+
+Gunakan dataset publik dari Kaggle (gratis):
+
+| Dataset | URL | Ukuran |
+|---------|-----|--------|
+| **Resume Dataset** | `kaggle.com/datasets/gauravduttakiit/resume-dataset` | 2,484 resumes, 25 categories |
+| **Job Description Dataset** | `kaggle.com/datasets/andrewmvd/data-scientist-jobs` | 4,000+ job descriptions |
+
+```bash
+# Install kaggle CLI
+pip install kaggle
+
+# Download (atau manual download dari browser)
+kaggle datasets download -d gauravduttakiit/resume-dataset
+kaggle datasets download -d andrewmvd/data-scientist-jobs
+```
+
+#### Step 1.4 — Dependencies
+
+```txt
+# requirements.txt
+pandas>=2.0
+numpy>=1.24
+scikit-learn>=1.3
+xgboost>=2.0
+matplotlib>=3.7
+seaborn>=0.12
+nltk>=3.8
+sentence-transformers>=2.2
+torch>=2.0
+transformers>=4.30
+streamlit>=1.28
+pdfplumber>=0.10
+joblib>=1.3
+```
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+### Phase 2: Feature Engineering (Hari 3-4)
+
+#### Step 2.1 — Text Preprocessing (`src/data_processing.py`)
+
+```python
+import re
+import nltk
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+
+nltk.download('punkt')
+nltk.download('stopwords')
+
+def clean_text(text: str) -> str:
+    """Clean resume/JD text for ML processing."""
+    # Remove URLs, emails, phone numbers
+    text = re.sub(r'http\S+|www\S+', '', text)
+    text = re.sub(r'\S+@\S+', '', text)
+    text = re.sub(r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b', '', text)
+    
+    # Remove special characters, keep letters and numbers
+    text = re.sub(r'[^a-zA-Z0-9\s]', ' ', text)
+    
+    # Lowercase and remove extra whitespace
+    text = text.lower().strip()
+    text = re.sub(r'\s+', ' ', text)
+    
+    return text
+
+def extract_skills(text: str, skill_list: list) -> list:
+    """Extract matching skills from text against a predefined skill list."""
+    text_lower = text.lower()
+    found_skills = []
+    for skill in skill_list:
+        if skill.lower() in text_lower:
+            found_skills.append(skill)
+    return found_skills
+
+def extract_years_experience(text: str) -> int:
+    """Extract years of experience from resume text using regex."""
+    patterns = [
+        r'(\d+)\+?\s*years?\s*(?:of\s+)?experience',
+        r'experience\s*:\s*(\d+)\+?\s*years?',
+        r'(\d+)\+?\s*years?\s*in\s+',
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text.lower())
+        if match:
+            return int(match.group(1))
+    return 0
+```
+
+#### Step 2.2 — Feature Engineering (`src/feature_engineering.py`)
+
+```python
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
+
+# Predefined skill taxonomy
+TECH_SKILLS = [
+    'python', 'java', 'javascript', 'typescript', 'react', 'angular',
+    'node.js', 'fastapi', 'django', 'flask', 'docker', 'kubernetes',
+    'aws', 'gcp', 'azure', 'postgresql', 'mongodb', 'redis',
+    'machine learning', 'deep learning', 'nlp', 'pytorch', 'tensorflow',
+    'scikit-learn', 'pandas', 'numpy', 'sql', 'git', 'ci/cd',
+]
+
+def build_features(resume_text: str, jd_text: str) -> dict:
+    """
+    Build feature vector from resume + job description pair.
+    Returns dict of engineered features for ML model.
+    """
+    # 1. TF-IDF Cosine Similarity
+    tfidf = TfidfVectorizer(max_features=5000, stop_words='english')
+    tfidf_matrix = tfidf.fit_transform([resume_text, jd_text])
+    tfidf_similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
+    
+    # 2. Skill Overlap
+    resume_skills = set(extract_skills(resume_text, TECH_SKILLS))
+    jd_skills = set(extract_skills(jd_text, TECH_SKILLS))
+    
+    if len(jd_skills) > 0:
+        skill_overlap_ratio = len(resume_skills & jd_skills) / len(jd_skills)
+    else:
+        skill_overlap_ratio = 0.0
+    
+    skill_count_resume = len(resume_skills)
+    skill_count_jd = len(jd_skills)
+    common_skills = len(resume_skills & jd_skills)
+    
+    # 3. Experience
+    years_exp = extract_years_experience(resume_text)
+    
+    # 4. Text Length Features
+    resume_word_count = len(resume_text.split())
+    jd_word_count = len(jd_text.split())
+    
+    return {
+        'tfidf_similarity': tfidf_similarity,
+        'skill_overlap_ratio': skill_overlap_ratio,
+        'skill_count_resume': skill_count_resume,
+        'skill_count_jd': skill_count_jd,
+        'common_skills': common_skills,
+        'years_experience': years_exp,
+        'resume_word_count': resume_word_count,
+        'jd_word_count': jd_word_count,
+    }
+```
+
+> [!TIP]
+> **Interview Talking Point:** "Saya melakukan feature engineering dari raw text — TF-IDF vectorization, skill overlap ratio, regex-based experience extraction — sebelum melatih classifier. Ini menunjukkan saya tidak hanya memanggil `.fit()`, tapi memahami bagaimana data perlu diproses sebelum masuk ke model."
+
+---
+
+### Phase 3: scikit-learn Models (Hari 5-7)
+
+#### Step 3.1 — Training Pipeline (`src/sklearn_pipeline.py`)
+
+```python
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.metrics import (
+    classification_report, confusion_matrix, 
+    accuracy_score, f1_score, roc_auc_score
+)
+from xgboost import XGBClassifier
+import joblib
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+def train_and_evaluate(X: pd.DataFrame, y: pd.Series):
+    """Train multiple scikit-learn models and compare performance."""
+    
+    # Split data
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
+    
+    # Define models to compare
+    models = {
+        'Logistic Regression': LogisticRegression(max_iter=1000),
+        'Random Forest': RandomForestClassifier(n_estimators=100, random_state=42),
+        'Gradient Boosting': GradientBoostingClassifier(n_estimators=100, random_state=42),
+        'XGBoost': XGBClassifier(n_estimators=100, random_state=42, eval_metric='mlogloss'),
+        'SVM': SVC(kernel='rbf', probability=True),
+    }
+    
+    results = {}
+    
+    for name, model in models.items():
+        # Train
+        model.fit(X_train, y_train)
+        
+        # Predict
+        y_pred = model.predict(X_test)
+        y_proba = model.predict_proba(X_test) if hasattr(model, 'predict_proba') else None
+        
+        # Evaluate
+        accuracy = accuracy_score(y_test, y_pred)
+        f1 = f1_score(y_test, y_pred, average='weighted')
+        cv_scores = cross_val_score(model, X, y, cv=5, scoring='f1_weighted')
+        
+        results[name] = {
+            'model': model,
+            'accuracy': accuracy,
+            'f1_score': f1,
+            'cv_mean': cv_scores.mean(),
+            'cv_std': cv_scores.std(),
+            'y_pred': y_pred,
+            'y_test': y_test,
+        }
+        
+        print(f"\n{'='*50}")
+        print(f"Model: {name}")
+        print(f"Accuracy: {accuracy:.4f}")
+        print(f"F1 Score: {f1:.4f}")
+        print(f"CV Score: {cv_scores.mean():.4f} (+/- {cv_scores.std():.4f})")
+        print(f"\nClassification Report:")
+        print(classification_report(y_test, y_pred))
+    
+    return results
+
+def plot_confusion_matrix(y_test, y_pred, labels, title="Confusion Matrix"):
+    """Plot confusion matrix using seaborn."""
+    cm = confusion_matrix(y_test, y_pred, labels=labels)
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+                xticklabels=labels, yticklabels=labels)
+    plt.title(title)
+    plt.ylabel('Actual')
+    plt.xlabel('Predicted')
+    plt.tight_layout()
+    plt.savefig(f'models/{title.replace(" ", "_").lower()}.png')
+    plt.show()
+
+def save_best_model(results: dict, filepath: str):
+    """Save the best performing model."""
+    best_name = max(results, key=lambda k: results[k]['f1_score'])
+    best_model = results[best_name]['model']
+    joblib.dump(best_model, filepath)
+    print(f"\nBest model: {best_name} (F1: {results[best_name]['f1_score']:.4f})")
+    print(f"Saved to: {filepath}")
+    return best_name, best_model
+```
+
+> [!IMPORTANT]
+> **Keyword yang akan ter-capture ATS:**
+> - "Trained Random Forest, Gradient Boosting, XGBoost, and SVM classifiers"
+> - "Cross-validation (5-fold) for model selection"
+> - "Feature engineering: TF-IDF vectorization, skill overlap ratio"
+> - "Model evaluation: F1 score, confusion matrix, ROC-AUC"
+
+---
+
+### Phase 4: PyTorch + Sentence Transformers (Hari 8-10)
+
+#### Step 4.1 — Semantic Matching (`src/pytorch_pipeline.py`)
+
+```python
+import torch
+from sentence_transformers import SentenceTransformer, util
+import numpy as np
+from typing import List, Tuple
+
+class SemanticMatcher:
+    """
+    PyTorch-based semantic matching using Sentence Transformers.
+    Compares resume and job description at the semantic level,
+    beyond keyword matching.
+    """
+    
+    def __init__(self, model_name: str = 'all-MiniLM-L6-v2'):
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.model = SentenceTransformer(model_name, device=self.device)
+        print(f"Loaded {model_name} on {self.device}")
+    
+    def encode_texts(self, texts: List[str]) -> torch.Tensor:
+        """Encode list of texts to embeddings."""
+        embeddings = self.model.encode(
+            texts, 
+            convert_to_tensor=True,
+            show_progress_bar=True,
+            device=self.device
+        )
+        return embeddings
+    
+    def compute_similarity(self, resume: str, job_description: str) -> float:
+        """Compute cosine similarity between resume and JD."""
+        embeddings = self.encode_texts([resume, job_description])
+        similarity = util.cos_sim(embeddings[0], embeddings[1])
+        return similarity.item()
+    
+    def rank_candidates(
+        self, 
+        resumes: List[str], 
+        job_description: str
+    ) -> List[Tuple[int, float]]:
+        """
+        Rank multiple resumes against a single job description.
+        Returns list of (index, score) sorted by score descending.
+        """
+        # Encode all at once (batch processing)
+        jd_embedding = self.model.encode(job_description, convert_to_tensor=True)
+        resume_embeddings = self.model.encode(resumes, convert_to_tensor=True)
+        
+        # Compute similarities
+        similarities = util.cos_sim(jd_embedding, resume_embeddings)[0]
+        
+        # Sort by score
+        ranked = sorted(
+            enumerate(similarities.tolist()), 
+            key=lambda x: x[1], 
+            reverse=True
+        )
+        
+        return ranked
+    
+    def compare_ml_vs_dl(
+        self, 
+        sklearn_scores: List[float], 
+        semantic_scores: List[float],
+        labels: List[int]
+    ) -> dict:
+        """
+        Compare scikit-learn (ML) vs Sentence Transformers (DL) predictions.
+        This is the KEY comparison that shows depth of understanding.
+        """
+        from sklearn.metrics import f1_score, accuracy_score
+        
+        # Threshold semantic scores to binary
+        semantic_predictions = [1 if s > 0.5 else 0 for s in semantic_scores]
+        sklearn_predictions = [1 if s > 0.5 else 0 for s in sklearn_scores]
+        
+        return {
+            'sklearn_f1': f1_score(labels, sklearn_predictions, average='weighted'),
+            'semantic_f1': f1_score(labels, semantic_predictions, average='weighted'),
+            'sklearn_accuracy': accuracy_score(labels, sklearn_predictions),
+            'semantic_accuracy': accuracy_score(labels, semantic_predictions),
+        }
+```
+
+> [!IMPORTANT]
+> **Interview Talking Point:** "Saya membandingkan pendekatan traditional ML (TF-IDF + XGBoost) dengan deep learning (Sentence Transformers + PyTorch). Traditional ML lebih cepat dan interpretable, tapi Sentence Transformers menangkap semantic similarity yang keyword matching tidak bisa — misalnya 'Python developer' dan 'software engineer' dianggap mirip meskipun keyword berbeda."
+
+---
+
+### Phase 5: Streamlit Demo UI (Hari 11-12)
+
+#### Step 5.1 — Interactive Demo (`app/app.py`)
+
+```python
+import streamlit as st
+import joblib
+from src.pytorch_pipeline import SemanticMatcher
+from src.feature_engineering import build_features
+from src.data_processing import clean_text
+
+st.set_page_config(page_title="AI Resume Screener", layout="wide")
+st.title("🎯 AI Resume Screening & Matching System")
+
+# Load models
+@st.cache_resource
+def load_models():
+    sklearn_model = joblib.load('models/best_sklearn_model.pkl')
+    semantic_matcher = SemanticMatcher()
+    return sklearn_model, semantic_matcher
+
+sklearn_model, semantic_matcher = load_models()
+
+# Sidebar
+method = st.sidebar.radio("Matching Method", ["ML (scikit-learn)", "DL (Sentence Transformers)", "Hybrid"])
+
+# Main UI
+col1, col2 = st.columns(2)
+
+with col1:
+    st.subheader("📄 Job Description")
+    jd_text = st.text_area("Paste job description here", height=300)
+
+with col2:
+    st.subheader("📋 Resume(s)")
+    uploaded_files = st.file_uploader("Upload resume(s)", accept_multiple_files=True, type=['txt', 'pdf'])
+
+if st.button("🔍 Analyze & Rank") and jd_text and uploaded_files:
+    # Process each resume
+    results = []
+    for file in uploaded_files:
+        resume_text = file.read().decode('utf-8')
+        resume_clean = clean_text(resume_text)
+        jd_clean = clean_text(jd_text)
+        
+        # scikit-learn score
+        features = build_features(resume_clean, jd_clean)
+        ml_score = sklearn_model.predict_proba([list(features.values())])[0][1] * 100
+        
+        # Semantic score
+        semantic_score = semantic_matcher.compute_similarity(resume_clean, jd_clean) * 100
+        
+        # Hybrid
+        hybrid_score = (ml_score * 0.4) + (semantic_score * 0.6)
+        
+        results.append({
+            'file': file.name,
+            'ml_score': ml_score,
+            'semantic_score': semantic_score,
+            'hybrid_score': hybrid_score,
+            'skills': features,
+        })
+    
+    # Display ranked results
+    results.sort(key=lambda x: x['hybrid_score'], reverse=True)
+    
+    for i, r in enumerate(results, 1):
+        with st.expander(f"#{i} — {r['file']} (Score: {r['hybrid_score']:.1f}/100)"):
+            col_a, col_b, col_c = st.columns(3)
+            col_a.metric("ML Score", f"{r['ml_score']:.1f}")
+            col_b.metric("Semantic Score", f"{r['semantic_score']:.1f}")
+            col_c.metric("Hybrid Score", f"{r['hybrid_score']:.1f}")
+            
+            st.json(r['skills'])
+```
+
+---
+
+### Phase 6: Documentation & CV Update (Hari 13-14)
+
+#### Step 6.1 — README.md (portfolio-grade)
+
+Ikuti format yang sama seperti README AI-Assistant-Cimahi yang baru saja kita tulis:
+- Architecture diagram
+- Tech stack table
+- Model comparison results (ML vs DL)
+- Feature engineering explanation
+- Screenshots dari Streamlit demo
+
+#### Step 6.2 — Update CV.md
+
+Tambahkan project baru di antara Smart Chatbot dan CPNS:
+
+```
+AI Resume Screening System | Github
+•  Built an ML pipeline comparing traditional ML (scikit-learn: Random Forest,
+   XGBoost, SVM) vs deep learning (PyTorch Sentence Transformers) for
+   resume-to-job matching — achieving XX% F1 score on 2,400+ resumes
+   across 25 job categories.
+•  Engineered 8 features from raw text using NLP techniques: TF-IDF
+   cosine similarity, skill overlap ratio, regex-based experience extraction,
+   and semantic embeddings — with 5-fold cross-validation for model selection.
+
+   Tech Stack: Python, scikit-learn, PyTorch, Sentence Transformers,
+   XGBoost, Pandas, NLTK, Streamlit
+```
+
+---
+
+## Timeline Summary
+
+| Hari | Aksi | Output |
+|------|------|--------|
+| 1-2 | Setup repo + download dataset + EDA | Notebook `01_eda.ipynb` |
+| 3-4 | Feature engineering + preprocessing | `src/data_processing.py`, `src/feature_engineering.py` |
+| 5-7 | Train 5 scikit-learn models + evaluation | `src/sklearn_pipeline.py`, confusion matrices |
+| 8-10 | PyTorch Sentence Transformers + comparison | `src/pytorch_pipeline.py`, ML vs DL comparison |
+| 11-12 | Streamlit demo UI | `app/app.py` |
+| 13-14 | README + CV update + push to GitHub | Portfolio-ready |
+
+---
+
+## Checklist: Keyword yang Akan Ter-unlock
+
+Setelah project selesai, Anda bisa **legitimate** menambahkan semua ini ke CV:
+
+```
+✅ scikit-learn           — 5 model di-train dan di-compare
+✅ PyTorch                — Sentence Transformers inference
+✅ Model Training         — End-to-end ML pipeline
+✅ Feature Engineering    — 8 custom features dari raw text
+✅ Classification         — Multi-class (25 categories)
+✅ NLP                    — Text preprocessing, TF-IDF, tokenization
+✅ Sentence Transformers  — Semantic similarity matching
+✅ XGBoost                — Gradient boosting classifier
+✅ Model Evaluation       — F1, Precision, Recall, Confusion Matrix, CV
+✅ Cross-Validation       — 5-fold stratified CV
+```
+
+> [!IMPORTANT]
+> **Setelah project ini selesai:**
+> - Match rate: **31% → 59%** (17/29 lowongan)
+> - Anda bisa apply ke **10 lowongan tambahan** termasuk posisi AI/ML Engineer bergaji Rp 10-20jt
+> - Saat interview teknis, Anda bisa **demo live** via Streamlit
