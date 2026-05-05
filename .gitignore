@@ -1,7 +1,9 @@
 venv/
 __pycache__/
-*.pkl
 *.pt
 *.joblib
 .ipynb_checkpoints/
 .DS_Store
+.env
+fix_hf.py
+run_notebook.py

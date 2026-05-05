@@ -15,6 +15,26 @@ from src.data_processing import clean_text
 st.set_page_config(page_title="AI Resume Screener", layout="wide")
 st.title("🎯 AI Resume Screening & Matching System")
 
+st.markdown("""
+An intelligent end-to-end ML pipeline that automates resume screening using **XGBoost** for profession classification 
+and **Sentence Transformers** for semantic candidate-to-job matching.
+
+---
+
+**How to use:**
+1. **Paste a Job Description** on the left panel — the role you're hiring for.
+2. **Upload one or more resumes** (PDF, DOCX, or TXT) on the right panel.
+3. Click **🔍 Analyze & Rank** — the system will process each resume and rank all candidates.
+
+**What you'll get:**
+- 🏷️ **Predicted Profession** — AI classifies the candidate's core profession out of 24 categories (powered by XGBoost + TF-IDF).
+- 📊 **AI Confidence** — how confident the model is about its prediction.
+- 🎯 **Match Score (0–100)** — semantic similarity between the resume and your job description (powered by Sentence Transformers).
+- 🔧 **Engineered Features** — extracted skills, experience years, and skill overlap ratio.
+
+---
+""")
+
 # Load models
 @st.cache_resource
 def load_models():

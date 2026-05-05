@@ -17,9 +17,11 @@ pinned: false
 ![XGBoost](https://img.shields.io/badge/XGBoost-3.2.0-blue.svg)
 ![Streamlit](https://img.shields.io/badge/Streamlit-1.57.0-red.svg)
 
+[![Live Demo](https://img.shields.io/badge/🤗%20Live%20Demo-Hugging%20Face%20Spaces-blue)](https://huggingface.co/spaces/Wilbun/AI-Resume-Screener)
+
 > An intelligent, end-to-end Machine Learning pipeline designed to automate the resume screening process. This system leverages both **Traditional Machine Learning (XGBoost)** for profession classification and **Deep Learning (Sentence Transformers)** for semantic candidate-to-job matching.
 
-*(Please insert your application screenshot here: `![App Demo](assets/demo.png)`)*
+![App Demo](assets/demo.png)
 
 ---
 
@@ -165,4 +167,3 @@ streamlit run app/app.py
 ## 📈 Future Improvements
 - Implement LangChain / LLM (GPT-4o / LLaMA-3) to generate human-readable justifications for why a candidate was ranked highly.
 - Expand the predefined skill taxonomy dynamically using a Knowledge Graph.
-- Deploy the application via Docker to AWS/GCP or Streamlit Cloud.
